@@ -1,0 +1,59 @@
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+
+export default function Cursor() {
+  const dot = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLDivElement>(null);
+  const label = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    document.documentElement.classList.add('has-cursor');
+    const dx = gsap.quickTo(dot.current, 'x', { duration: 0.1, ease: 'power3' });
+    const dy = gsap.quickTo(dot.current, 'y', { duration: 0.1, ease: 'power3' });
+    const rx = gsap.quickTo(ring.current, 'x', { duration: 0.5, ease: 'power3' });
+    const ry = gsap.quickTo(ring.current, 'y', { duration: 0.5, ease: 'power3' });
+
+    const root = dot.current!.parentElement!;
+    const move = (e: PointerEvent) => {
+      root.classList.add('is-live');
+      dx(e.clientX);
+      dy(e.clientY);
+      rx(e.clientX);
+      ry(e.clientY);
+    };
+    const over = (e: PointerEvent) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>('[data-cursor], a, button');
+      const text = t?.dataset.cursor ?? '';
+      ring.current?.classList.toggle('is-hover', !!t);
+      ring.current?.classList.toggle('has-label', !!text);
+      if (label.current) label.current.textContent = text;
+    };
+    const leave = () => root.classList.remove('is-live');
+    const down = () => ring.current?.classList.add('is-down');
+    const up = () => ring.current?.classList.remove('is-down');
+
+    window.addEventListener('pointermove', move, { passive: true });
+    window.addEventListener('pointerover', over, { passive: true });
+    document.addEventListener('pointerleave', leave);
+    window.addEventListener('pointerdown', down);
+    window.addEventListener('pointerup', up);
+    return () => {
+      document.documentElement.classList.remove('has-cursor');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerover', over);
+      document.removeEventListener('pointerleave', leave);
+      window.removeEventListener('pointerdown', down);
+      window.removeEventListener('pointerup', up);
+    };
+  }, []);
+
+  return (
+    <div className="cursor" aria-hidden="true">
+      <div className="cursor__ring" ref={ring}>
+        <span ref={label} />
+      </div>
+      <div className="cursor__dot" ref={dot} />
+    </div>
+  );
+}
